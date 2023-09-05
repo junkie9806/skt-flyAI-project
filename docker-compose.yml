@@ -1,0 +1,53 @@
+version: '3.7'
+services:
+  kbodot:
+    image: docker.io/library/kbodot:latest
+    build:
+      context: . # dockerfile이 있는 디렉토리로 이동
+      dockerfile: Dockerfile # Dockerfile이 있는 경로
+    ports:
+      - "8080:8080"
+    restart: always
+    volumes:
+      - ./build/libs:/app
+      - ./src/main/resources:/app/resources # 스프링 부트 리소스 폴더 마운팅
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mariadb://kbodot_mariadb_1:3306/kbo?useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: 1234
+    depends_on:
+      - mariadb
+    networks:
+      - kbodot_network
+
+  mariadb:
+    image: mariadb:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: 1234
+      MYSQL_DATABASE: kbo
+      MYSQL_USER: root
+      MYSQL_PASSWORD: 1234
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+    restart: always
+    volumes:
+      - ./mariadb/data:/var/lib/mysql
+      - ./src/main/resources:/var/lib/mysql-resources # 스프링 부트 리소스 폴더 마운팅
+    ports:
+      - "3306:3306"
+    networks:
+      - kbodot_network
+
+  frontend: # React 프론트엔드 서비스
+    build:
+      context: ./Front-End  # React 프로젝트 디렉터리 경로
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "80:3000" # Nginx 기본 포트
+    depends_on:
+      - kbodot
+    networks:
+      - kbodot_network
+
+networks:
+  kbodot_network:
